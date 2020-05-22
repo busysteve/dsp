@@ -7,11 +7,11 @@
 int main( int argc, char** argv )
 {
 
-	Wave wave;
+	Wave wave( atoi(argv[1]), atoi(argv[2]) );
 
-	wave.sinwave( atof(argv[1]), 100, 5 );
+	wave.sinwave( atof(argv[3]), 100, 3 );
 
-	wave.write( argv[2] );
+	wave.write( argv[4] );
 
 	return 0;
 
