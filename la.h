@@ -18,18 +18,27 @@ template <class T> class Vector : public std::vector< T>
 
 public:
 
-	Vector< T>() {}
+	//Vector< T>() {}
 	
-	Vector< T>(initializer_list<T> l ) {
+	Vector<T>( int s, T x = (T)(0.0) ) {
+		std::vector<T>::resize( s, x );
+	}
+	
+	Vector<T>( const Vector<T>& r ) {
+		for( auto k : r )
+			std::vector<T>::push_back(k);
+	}
+	
+	Vector<T>(initializer_list<T> l ) {
 		for( auto k : l )
 			std::vector<T>::push_back(k);
 	}
 	
-	virtual ~Vector< T>() {}
+	virtual ~Vector<T>() {}
 
+	// Vector | Vector Arithmetic section
 	
-
-	T dot( const Vector< T>& v )
+	T dot( const Vector<T>& v ) const 
 	{
 		if( this->size() != v.size() || v.size() == 0 )
 			return nan("NaN");
@@ -41,7 +50,194 @@ public:
 		return ret;
 	}
 
+	Vector<T>  mul( const Vector<T>& v ) const 
+	{
+		if( this->size() != v.size() || v.size() == 0 )
+			return nan("NaN");
+		
+		Vector<T> vret( v.size(), (T)0.0 );
+		for( int i=0; i < v.size(); i++ )
+			vret[i] = (*this)[i] * v[i];
+			
+		return vret;
+	}
+
+	Vector<T>  div( const Vector<T>& v ) const 
+	{
+		if( this->size() != v.size() || v.size() == 0 )
+			return nan("NaN");
+		
+		Vector<T> vret( v.size(), (T)0.0 );
+		for( int i=0; i < v.size(); i++ )
+			vret[i] = (*this)[i] / v[i];
+			
+		return vret;
+	}
+
+	Vector<T>  add( const Vector<T>& v ) const 
+	{
+		if( this->size() != v.size() || v.size() == 0 )
+			return nan("NaN");
+		
+		Vector<T> vret( v.size(), (T)0.0 );
+		for( int i=0; i < v.size(); i++ )
+			vret[i] = (*this)[i] + v[i];
+			
+		return vret;
+	}
+
+	Vector<T>  sub( const Vector<T>& v ) const 
+	{
+		if( this->size() != v.size() || v.size() == 0 )
+			return nan("NaN");
+		
+		Vector<T> vret( v.size(), (T)0.0 );
+		for( int i=0; i < v.size(); i++ )
+			vret[i] = (*this)[i] - v[i];
+			
+		return vret;
+	}
+
+
+	// Vector | Scalar Arithmetic section
+
+	Vector<T>  mul( T s ) const 
+	{
+		if( this->size() == 0 )
+			return nan("NaN");
+		
+		Vector<T> vret( std::vector<T>::size(), (T)0.0 );
+		for( int i=0; i < std::vector<T>::size(); i++ )
+			vret[i] = (*this)[i] * s;
+			
+		return vret;
+	}
+
+	Vector<T>  div( T s ) const 
+	{
+		if( this->size() == 0 )
+			return nan("NaN");
+		
+		Vector<T> vret( std::vector<T>::size(), (T)0.0 );
+		for( int i=0; i < std::vector<T>::size(); i++ )
+			vret[i] = (*this)[i] / s;
+			
+		return vret;
+	}
+
+	Vector<T>  add( T s ) const 
+	{
+		if( this->size() == 0 )
+			return nan("NaN");
+		
+		Vector<T> vret( std::vector<T>::size(), (T)0.0 );
+		for( int i=0; i < std::vector<T>::size(); i++ )
+			vret[i] = (*this)[i] + s;
+			
+		return vret;
+	}
+
+	Vector<T>  sub( T s ) const 
+	{
+		if( this->size() == 0 )
+			return nan("NaN");
+		
+		Vector<T> vret( std::vector<T>::size(), (T)0.0 );
+		for( int i=0; i < std::vector<T>::size(); i++ )
+			vret[i] = (*this)[i] - s;
+			
+		return vret;
+	}
+
+	// Vector Operator Overloading
+	Vector<T>  operator-( ) const
+	{
+		Vector<T> ret( (*this).mul((T)-1.0) );
+		
+		return ret;
+	}
 	
+	Vector<T>  operator-( const Vector<T>& r ) const 
+	{
+		return sub(r);
+	}
+	
+	Vector<T>  operator-( const T& r ) const 
+	{
+		return sub(r);
+	}
+	
+	
+	Vector<T>  operator+( const Vector<T>& r ) const 
+	{
+		return add(r);
+	}
+	
+	Vector<T>  operator+( const T& r ) const 
+	{
+		return add(r);
+	}
+	
+	
+	Vector<T>  operator*( const Vector<T>& r ) const 
+	{
+		return mul(r);
+	}
+	
+	Vector<T>  operator*( const T& r ) const 
+	{
+		return mul(r);
+	}
+	
+	
+	Vector<T>  operator/( const Vector<T>& r ) const 
+	{
+		return div(r);
+	}
+	
+	Vector<T>  operator/( const T& r ) const 
+	{
+		return div(r);
+	}
+	
+	
+
+	friend Vector<T> operator-( const T& l, const Vector<T> & v)
+	{
+		return (-v).sub(l);
+	}
+	
+	friend Vector<T> operator/( const T& l, const Vector<T> & v)
+	{
+		return ( (v).div( (T)1.0 / (T)l ) );
+	}
+	
+	friend Vector<T> operator*( const T& l, const Vector<T> & v)
+	{
+		return (v).mul(l);
+	}
+	
+	friend Vector<T> operator+( const T& l, const Vector<T> & v)
+	{
+		return (v).add(l);
+	}
+	
+	friend std::ostream& operator<<(std::ostream& os, const Vector<T> & v)
+	{
+	
+		os << "{";
+		
+		if( v.size() > 0 )
+		{
+			os << v[0];
+			for( int i=1; i < v.size(); i++ )
+				os << "," << v[i];
+		}
+			
+		os << "}";
+
+		return os;
+	}
 
 };
 
@@ -82,8 +278,8 @@ public:
 	  if (&rhs == this)
 	    return *this;
 
-	  unsigned int new_rows = rhs.get_rows();
-	  unsigned int new_cols = rhs.get_cols();
+	  unsigned int new_rows = rhs.nr();
+	  unsigned int new_cols = rhs.nc();
 
 	  _m.resize(new_rows);
 	  for (unsigned int i=0; i<_m.size(); i++) {
@@ -120,8 +316,8 @@ public:
 	// Cumulative addition of this Matrix and another
 
 	Matrix<T>& operator+=(const Matrix<T>& rhs) {
-	  unsigned int _rs = rhs.get_rows();
-	  unsigned int _cs = rhs.get_cols();
+	  unsigned int _rs = rhs.nr();
+	  unsigned int _cs = rhs.nc();
 
 	  for (unsigned int i=0; i<_rs; i++) {
 	    for (unsigned int j=0; j<_cs; j++) {
@@ -138,8 +334,8 @@ public:
 	// Left multiplication of this Matrix and another
 
 	Matrix<T>& operator*(const Matrix<T>& rhs) {
-	  unsigned int _rs = rhs.get_rows();
-	  unsigned int _cs = rhs.get_cols();
+	  unsigned int _rs = rhs.nr();
+	  unsigned int _cs = rhs.nc();
 	  Matrix result(_rs, _cs, 0.0);
 
 	  for (unsigned int i=0; i<_rs; i++) {
@@ -227,6 +423,23 @@ public:
 	// Get the number of columns of the Matrix 
 	unsigned int nc() const {
 	  return this->_cs;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Matrix<T> & m)
+	{
+	
+		os << "{";
+		
+		if( m.size() > 0 )
+		{
+			os << m[0];
+			for( int i=1; i < m.size(); i++ )
+				os << "," << m[i];
+		}
+			
+		os << "}";
+
+		return os;
 	}
 
 

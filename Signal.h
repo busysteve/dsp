@@ -7,6 +7,8 @@
 #include <cstring>
 #include <cmath>
 #include <float.h>
+#include "tnt/tnt.h"
+
 
 using namespace std;
 
@@ -74,6 +76,7 @@ public:
 		_bitspersample = bits;
 		_byterate = _samprate * ( _bitspersample / 8 );
 	}	
+
 
 	void sinwave( double freq, double amp, double duration )
 	{
