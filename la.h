@@ -18,7 +18,7 @@ template <class T> class Vector : public std::vector< T>
 
 public:
 
-	//Vector< T>() {}
+	Vector< T>() {}
 	
 	Vector<T>( int s, T x = (T)(0.0) ) {
 		std::vector<T>::resize( s, x );
@@ -29,9 +29,19 @@ public:
 			std::vector<T>::push_back(k);
 	}
 	
-	Vector<T>(initializer_list<T> l ) {
+	Vector<T>( initializer_list<T> l ) {
 		for( auto k : l )
 			std::vector<T>::push_back(k);
+	}
+	
+	Vector<T>( initializer_list< initializer_list<T> >& ll ) {
+		for( auto l : ll )
+			std::vector<T>::push_back( T(l) );
+	}
+	
+	Vector<T>( Vector< Vector<T> > ll ) {
+		for( auto l : ll )
+			std::vector<T>::push_back( T(l) );
 	}
 	
 	virtual ~Vector<T>() {}
@@ -222,6 +232,9 @@ public:
 		return (v).add(l);
 	}
 	
+	//T& operator[](unsigned int i)  { return (*this)[i]; }
+	
+	
 	friend std::ostream& operator<<(std::ostream& os, const Vector<T> & v)
 	{
 	
@@ -260,6 +273,20 @@ public:
 		
 		_rs = rows;
 		_cs = cols;
+	}
+
+	//Matrix( initializer_list< initializer_list<T> > il ) 
+	Matrix( Vector< Vector< T > > vl ) 
+		//: _m(il) 
+	{		
+		for ( auto l : vl ) 
+			_m.push_back(l);
+		
+		_rs = _m.size();
+		_cs = 0;
+			
+		if( _rs > 0 )
+			_cs = _m[0].size();
 	}
 
 	Matrix(const Matrix<T>& r) {
@@ -333,14 +360,17 @@ public:
 
 	// Left multiplication of this Matrix and another
 
-	Matrix<T>& operator*(const Matrix<T>& rhs) {
-	  unsigned int _rs = rhs.nr();
-	  unsigned int _cs = rhs.nc();
-	  Matrix result(_rs, _cs, 0.0);
+	Matrix<T> operator*(const Matrix<T>& rhs) {
+	  unsigned int rs = nr();
+	  unsigned int cs = rhs.nc();
+	  
+	  cout << rs << "x" << cs << endl;
+	  
+	  Matrix result(rs, cs, 0.0);
 
-	  for (unsigned int i=0; i<_rs; i++) {
-	    for (unsigned int j=0; j<_cs; j++) {
-	      for (unsigned int k=0; k<_rs; k++) {
+	  for (unsigned int i=0; i<rs; i++) {
+	    for (unsigned int j=0; j<cs; j++) {
+	      for (unsigned int k=0; k<rhs.nr(); k++) {
 		result(i,j) += this->_m[i][k] * rhs(k,j);
 	      }
 	    }
@@ -377,13 +407,25 @@ public:
 
 	// Multiply a Matrix with a Vector 
 
-	template< T>
-	Vector<T> operator*(const Vector<T>& r) {
-	  Vector<T> result(r.size(), 0.0);
+
+	Vector<T> operator*(const Vector<T>& r) const {
+	  Vector<T> result(_rs, 0.0);
 
 	  for (unsigned int i=0; i<_rs; i++) {
 	    for (unsigned int j=0; j<_cs; j++) {
-	      result[i] = this->_m[i][j] * r[j];
+	      result[i] += this->_m[i][j] * r[j];
+	    }
+	  }
+
+	  return result;
+	}
+
+	Vector<T> operator+(const Vector<T>& r) const {
+	  Vector<T> result(_rs, 0.0);
+
+	  for (unsigned int i=0; i<_rs; i++) {
+	    for (unsigned int j=0; j<_cs; j++) {
+	      result[i] += this->_m[i][j] + r[j];
 	    }
 	  }
 
@@ -425,15 +467,24 @@ public:
 	  return this->_cs;
 	}
 
-	friend std::ostream& operator<<(std::ostream& os, const Matrix<T> & m)
+	
+	Vector<T> operator[](unsigned int i) const {
+	  return _m[i];
+	}
+
+	Vector<T>& operator[](unsigned int i)  {
+	  return _m[i];
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Matrix<T> & m)  
 	{
 	
 		os << "{";
 		
-		if( m.size() > 0 )
+		if( m.nr() > 0 )
 		{
 			os << m[0];
-			for( int i=1; i < m.size(); i++ )
+			for( int i=1; i < m.nr(); i++ )
 				os << "," << m[i];
 		}
 			
