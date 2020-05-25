@@ -11,6 +11,30 @@
 #include <cmath>
 #include <float.h>
 #include <initializer_list>
+#include <exception>
+
+class linear_algebra_error : public exception {
+
+protected:
+   std::string msg;
+public:
+   const char * what () const throw () {
+      return msg.c_str();
+   }	//virtual const char * what () = 0;
+};
+ 
+class vector_algebra_error : public linear_algebra_error {
+public:
+	vector_algebra_error( const char* em )
+	{ msg = em; }
+};
+ 
+class matrix_algebra_error : public linear_algebra_error {
+public:
+	matrix_algebra_error( const char* em )
+	{ msg = em; }
+};
+ 
 
 
 template <class T> class Vector : public std::vector< T>
@@ -251,6 +275,23 @@ public:
 
 		return os;
 	}
+	
+	std::ostream& print(std::ostream& os = std::cout )  
+	{		
+		os << "|";
+		
+		if( (*this).size() > 0 )
+		{
+			os << (*this)[0];
+			for( int i=1; i < (*this).size(); i++ )
+				os << "\t" << (*this)[i];
+		}
+			
+		os << "|" << endl;
+
+		return os;
+	}
+	
 
 };
 
@@ -264,8 +305,12 @@ template <typename T> class Matrix
 	unsigned int _rs;
 	unsigned int _cs;
 	
+	
 public:
-	Matrix(unsigned int rows, unsigned int cols, const T& x) {
+	Matrix<T>() : _rs(0), _cs(0) {}
+	
+	Matrix(unsigned int rows, unsigned int cols, const T& x) 
+	{
 		_m.resize(rows);
 		
 		for ( unsigned int i=0; i < _m.size(); i++ ) 
@@ -277,7 +322,6 @@ public:
 
 	//Matrix( initializer_list< initializer_list<T> > il ) 
 	Matrix( Vector< Vector< T > > vl ) 
-		//: _m(il) 
 	{		
 		for ( auto l : vl ) 
 			_m.push_back(l);
@@ -289,7 +333,8 @@ public:
 			_cs = _m[0].size();
 	}
 
-	Matrix(const Matrix<T>& r) {
+	Matrix(const Matrix<T>& r) 
+	{
 		_m = r._m;
 		_rs = r.nr();
 		_cs = r.nc();
@@ -325,9 +370,35 @@ public:
 	}
 
 
+	// Equality comparison
+	bool operator==(const Matrix<T>& rhs) {
+	  if (&rhs == this)
+	    return true;
+
+
+	  unsigned int new_rows = rhs.nr();
+	  unsigned int new_cols = rhs.nc();
+
+	  for (unsigned int i=0; i<new_rows; i++) {
+	    for (unsigned int j=0; j<new_cols; j++) {
+	      if( _m[i][j] != rhs(i, j) )
+	      	return false;
+	    }
+	  }
+
+	  return true;
+	}
+
+
 	// Addition
 
-	Matrix<T>& operator+(const Matrix<T>& rhs) {
+	Matrix<T> operator+(const Matrix<T>& rhs) {
+
+	  if( _rs != rhs._rs || _cs != rhs._cs )
+	  	//return Matrix<T>();
+		throw matrix_algebra_error("Matrix dimensions do not match as needed for addition");	 
+	  
+	 
 	  Matrix result(_rs, _cs, 0.0);
 
 	  for (unsigned int i=0; i<_rs; i++) {
@@ -364,7 +435,7 @@ public:
 	  unsigned int rs = nr();
 	  unsigned int cs = rhs.nc();
 	  
-	  cout << rs << "x" << cs << endl;
+	  //cout << rs << "x" << cs << endl;
 	  
 	  Matrix result(rs, cs, 0.0);
 
@@ -409,6 +480,13 @@ public:
 
 
 	Vector<T> operator*(const Vector<T>& r) const {
+	
+	  if( r.size() != nc() )
+	  	//return Vector<T>();
+		throw matrix_algebra_error(
+			"The vector dimension does not match this column dimension"
+		);	 
+	
 	  Vector<T> result(_rs, 0.0);
 
 	  for (unsigned int i=0; i<_rs; i++) {
@@ -432,6 +510,28 @@ public:
 	  return result;
 	}
 
+	// Matrix transpose
+	Matrix<T>& transpose() {
+	  auto cs=_rs;
+	  auto rs=_cs;
+	  Matrix result(rs, cs, 0.0);
+
+	  for (unsigned int i=0; i<_rs; i++) {
+	    for (unsigned int j=0; j<_cs; j++) {
+	      result(j,i) = this->_m[i][j];
+	    }
+	  }
+	
+	_m.clear();
+	_m = result._m;
+	_rs=rs;
+	_cs=cs;	
+		
+		
+	  return *this;
+	}
+
+	  
 
 	// Obtain a Vector of the diagonal elements
 
@@ -487,8 +587,24 @@ public:
 			for( int i=1; i < m.nr(); i++ )
 				os << "," << m[i];
 		}
+		else
+			os << "{}";
 			
 		os << "}";
+
+		return os;
+	}
+
+	std::ostream& print(std::ostream& os = std::cout )  
+	{		
+		if( nr() > 0 )
+		{
+			//os << "|";
+			//os << _m[0];
+			for( int i=0; i < nr(); i++ )
+				_m[i].print( os );
+			//os << "|";
+		}
 
 		return os;
 	}

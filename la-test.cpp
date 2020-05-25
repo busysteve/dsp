@@ -64,27 +64,30 @@ template <typename T> int VectorTest()
 
 	{
 		
-		cout << endl << "Matrix tests:" << endl;
+		cout << endl << "Matrix * Matrix tests:" << endl;
 		
-		Matrix<T> m1( {	{ 34.0, -28.0 },
-				{ -83.4, 71.7 },
-				{ 83.4, 71.7 },
-				{ 92.6, 23.3 } }	
+		Matrix<T> mA( {	{ 5.0, 34.0, -28.0 },
+				{ 8.0, -83.4, 71.7 },
+				{ 92.6, 23.3, 9.2 } }	
 				);
 		
-		Matrix<T> m2( {	{ 56.0, 26.0 },
-				{ 8.4, 1.9 } } 
+		Matrix<T> mB( {	{ 56.0, 26.0, 4.3 },
+				{ 6.5, 33.4, 5.6 }, 
+				{ 8.4, 1.9, 2.3 } } 
 				);
 				
-		cout << m1 << " * " << m2 << " = " << m1 * m2 << endl;
-		
-		
-		
-		Vector<T> v1( { 23.4, 34.5, 45.6 } );
+		Matrix<T> mC( {	{ 5.0, 34.0, -28.0 },
+				{ 8.0, -83.4, 71.7 },
+				{ 83.4, 4.3, 71.7 },
+				{ 92.6, 23.3, 9.2 } }	
+				);
 
-		cout << m1 << " * " << v1 << " = " << m1 * v1 << endl;
-		
-		//cout << m1 << " + " << v1 << " = " << m1 + v1 << endl;
+		try{
+			cout << mA << " + " << mC << " = " << mA + mC << endl << endl;
+		} catch ( linear_algebra_error e )
+		{
+			cerr << e.what() << endl;
+		}
 		
 		
 		Matrix<T> m3( {	{ 5.0, 34.0, -28.0 },
@@ -100,6 +103,44 @@ template <typename T> int VectorTest()
 				
 		cout << m3 << " * " << m4 << " = " << m3 * m4 << endl;
 
+
+		Matrix<T> m1( {	{ 34.0, -28.0 },
+				{ -83.4, 71.7 },
+				{ 83.4, 71.7 },
+				{ 92.6, 23.3 } }	
+				);
+		
+		Matrix<T> m2( {	{ 56.0, 26.0 },
+				{ 8.4, 1.9 } } 
+				);
+				
+		cout << m1 << " * " << m2 << " = " << m1 * m2 << endl;
+		
+		m3.print() << endl;
+		m3.transpose();
+		m3.print() << endl;
+		
+		//cout << m1 << " / " << m2 << " = " << m1 / m2 << endl;
+		
+		
+		
+		
+		cout << endl << "Matrix * Vector tests:" << endl;
+		
+		Matrix<T> m5( {	{ 34.0, -28.0 },
+				{ -83.4, 71.7 },
+				{ 92.6, 23.3 } }	
+				);
+		
+		Vector<T> v1( { 23.4, 45.6 } );
+		Vector<T> v2( { 23.4, 45.6, 77.0 } );
+
+		cout << m5 << " * " << v1 << " = " << m5 * v1 << endl << endl;
+		
+		cout << m5 << " * " << v2 << " = " << m5 * v2 << endl << endl;
+		
+		//cout << m1 << " + " << v1 << " = " << m1 + v1 << endl;
+		
 		
 
 		
