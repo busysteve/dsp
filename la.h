@@ -12,6 +12,7 @@
 #include <float.h>
 #include <initializer_list>
 #include <exception>
+#include <functional>
 
 class linear_algebra_error : public exception {
 
@@ -35,6 +36,9 @@ public:
 	{ msg = em; }
 };
  
+
+
+template <typename T> class Matrix;
 
 
 template <class T> class Vector : public std::vector< T>
@@ -69,6 +73,22 @@ public:
 	}
 	
 	virtual ~Vector<T>() {}
+
+
+	// Vector Outer Products 
+	Matrix<T> outer( const Vector<T>& v ) const {
+	  Matrix<T> r( (*this).size(), v.size(), 0.0);
+
+	  for (unsigned int i=0; i<r.nr(); i++) {
+	    for (unsigned int j=0; j<r.nc(); j++) {
+	      r(i,j) = (*this)[i] * v[j];
+	    }
+	  }
+
+	  return r;
+	}
+
+
 
 	// Vector | Vector Arithmetic section
 	
@@ -369,6 +389,7 @@ public:
 	  return *this;
 	}
 
+	
 
 	// Equality comparison
 	bool operator==(const Matrix<T>& rhs) {
@@ -460,6 +481,21 @@ public:
 	}
 
 
+
+	Matrix<T>& func( std::function<T(T)> f ) {
+	//Matrix<T>& func( T(*f)(T) ) {
+	  //Matrix result(_rs, _cs, 0.0);
+
+	  for (unsigned int i=0; i<_rs; i++) {
+	    for (unsigned int j=0; j<_cs; j++) {
+	      (*this)(i,j) = f( this->_m[i][j] );
+	    }
+	  }
+
+	  return (*this);
+	}
+
+
 	// Matrix/scalar addition   
 
 	Matrix<T>& operator+(const T& rhs) {
@@ -474,6 +510,7 @@ public:
 	  return result;
 	}
 
+	
 	  
 
 	// Multiply a Matrix with a Vector 

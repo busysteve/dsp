@@ -16,6 +16,10 @@
 
 template <typename T> int VectorTest()
 {
+
+	const double PI = 3.141592653589793238463;
+	const double PI2 = PI * 2.0;
+	
 	{
 		cout << "Vector tests:" << endl;
 
@@ -86,7 +90,7 @@ template <typename T> int VectorTest()
 			cout << mA << " + " << mC << " = " << mA + mC << endl << endl;
 		} catch ( linear_algebra_error e )
 		{
-			cerr << e.what() << endl;
+			cerr << endl << e.what() << endl;
 		}
 		
 		
@@ -135,14 +139,40 @@ template <typename T> int VectorTest()
 		Vector<T> v1( { 23.4, 45.6 } );
 		Vector<T> v2( { 23.4, 45.6, 77.0 } );
 
-		cout << m5 << " * " << v1 << " = " << m5 * v1 << endl << endl;
+		try
+		{
+			cout << m5 << " * " << v1 << " = " << m5 * v1 << endl << endl;
+			
+			cout << m5 << " * " << v2 << " = " << m5 * v2 << endl << endl;
+		}
+		catch( linear_algebra_error e )
+		{
+			cerr << endl << e.what() << endl;
+		}
 		
-		cout << m5 << " * " << v2 << " = " << m5 * v2 << endl << endl;
+		Matrix<T> a( {{2,3},{4,5},{4,5}} );
+		Vector<T> b( {6,7} );
 		
-		//cout << m1 << " + " << v1 << " = " << m1 + v1 << endl;
-		
-		
+		cout << endl << a << " * " << b << " = " << a * b << endl;
 
+		
+		Vector<T> amps( {0.6,0.25,0.1,0.05} );
+		Vector<T> fs( {300,400,500,600} );
+		Vector<T> ts;
+		for( double t=0.0; t <1.0; t += 1.0/11025.0)
+			 ts.push_back(t);
+		
+		cout << endl << amps << " * " << fs << " = " << amps * fs << endl;
+		//cout << endl << ts << endl;
+		//cout << endl << ts << " * " << fs << " = " << ts * fs << endl;
+		
+		auto args = ts.outer(fs);
+		auto M = args;
+		M.func( [&]( T x ){ return PI2 * std::cos(x); } );
+		cout << endl << M << endl;
+		
+		auto ys = M * amps;
+		cout << endl << ys << endl;
 		
 	}	
 	
