@@ -155,11 +155,11 @@ template <typename T> int VectorTest()
 		
 		cout << endl << a << " * " << b << " = " << a * b << endl;
 
-		
+		double framerate = 11025.0;
 		Vector<T> amps( {0.6,0.25,0.1,0.05} );
-		Vector<T> fs( {300,400,500,600} );
+		Vector<T> fs( {300.0,400.0,500.0,600.0} );
 		Vector<T> ts;
-		for( double t=0.0; t <1.0; t += 1.0/11025.0)
+		for( double t=0.0; t <1.0; t += 1.0/framerate)
 			 ts.push_back(t);
 		
 		cout << endl << amps << " * " << fs << " = " << amps * fs << endl;
@@ -168,11 +168,18 @@ template <typename T> int VectorTest()
 		
 		auto args = ts.outer(fs);
 		auto M = args;
-		M.func( [&]( T x ){ return PI2 * std::cos(x); } );
+		M.func( [&]( T x ){ return std::cos( PI2 * x); } );
 		cout << endl << M << endl;
 		
 		auto ys = M * amps;
-		cout << endl << ys << endl;
+		cout << endl << ys << endl << ys.size() << endl;
+		cout << endl << ys[1000] << endl << endl;
+		
+		Wave wav( framerate, 16 );
+		
+		wav.setsignal(ys, 100.0);
+		
+		wav.write( "quad-tone.wav" );
 		
 	}	
 	

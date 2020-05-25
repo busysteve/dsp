@@ -307,7 +307,7 @@ public:
 				os << "\t" << (*this)[i];
 		}
 			
-		os << "|" << endl;
+		os << "|" << std::endl;
 
 		return os;
 	}

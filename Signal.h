@@ -173,7 +173,7 @@ public:
 		{
 			_chunksize = 0;
 			file.read( (char*)&_chunksize, sizeof(_chunksize));
-			std::cout << "chunksize = " << _chunksize << std::endl;
+			//std::cout << "chunksize = " << _chunksize << std::endl;
 			
 			file.read( seg, 4 );
 			if( std::strncmp( seg, WAVE, 4 ) != 0 )
@@ -185,31 +185,31 @@ public:
 			
 			_subchunksize = 0;
 			file.read( (char*)&_subchunksize, sizeof(_subchunksize));
-			std::cout << "subchunksize = " << _subchunksize << std::endl;
+			//std::cout << "subchunksize = " << _subchunksize << std::endl;
 
 			_audioformat = 0;
 			file.read( (char*)&_audioformat, sizeof(_audioformat));
-			std::cout << "audioformat = " << _audioformat << std::endl;
+			//std::cout << "audioformat = " << _audioformat << std::endl;
 			
 			_numchannels = 0;
 			file.read( (char*)&_numchannels, sizeof(_numchannels));
-			std::cout << "numchannels = " << _numchannels << std::endl;
+			//std::cout << "numchannels = " << _numchannels << std::endl;
 			
 			_samprate = 0;
 			file.read( (char*)&_samprate, sizeof(_samprate));
-			std::cout << "samprate = " << _samprate << std::endl;
+			//std::cout << "samprate = " << _samprate << std::endl;
 			
 			_byterate = 0;
 			file.read( (char*)&_byterate, sizeof(_byterate));
-			std::cout << "byterate = " << _byterate << std::endl;
+			//std::cout << "byterate = " << _byterate << std::endl;
 			
 			_blockalign = 0;
 			file.read( (char*)&_blockalign, sizeof(_blockalign));
-			std::cout << "blockalign = " << _blockalign << std::endl;
+			//std::cout << "blockalign = " << _blockalign << std::endl;
 			
 			_bitspersample = 0;
 			file.read( (char*)&_bitspersample, sizeof(_bitspersample));
-			std::cout << "bitspersample = " << _bitspersample << std::endl;
+			//std::cout << "bitspersample = " << _bitspersample << std::endl;
 			
 			file.read( seg, 4 );
 			if( std::strncmp( seg, DATA, 4 ) != 0 )
@@ -217,7 +217,7 @@ public:
 			
 			unsigned int _subchunk2Size = 0;
 			file.read( (char*)&_subchunk2Size, sizeof(_subchunk2Size));
-			std::cout << "subchunk2Size = " << _subchunk2Size << std::endl;
+			//std::cout << "subchunk2Size = " << _subchunk2Size << std::endl;
 
 			if( _bitspersample == 8 )
 			{
@@ -290,38 +290,38 @@ public:
 		file.write( RIFF, 4 );
 
 		file.write( (char*)&chunksize, sizeof(chunksize));
-		std::cout << "chunksize = " << chunksize << std::endl;
+		//std::cout << "chunksize = " << chunksize << std::endl;
 		
 		file.write( WAVE, 4 );
 		file.write( FMT, 4 );
 		
 		file.write( (char*)&subchunksize, sizeof(subchunksize));
-		std::cout << "subchunksize = " << subchunksize << std::endl;
+		//std::cout << "subchunksize = " << subchunksize << std::endl;
 
 		file.write( (char*)&_audioformat, sizeof(_audioformat));
-		std::cout << "audioformat = " << _audioformat << std::endl;
+		//std::cout << "audioformat = " << _audioformat << std::endl;
 		
 		file.write( (char*)&_numchannels, sizeof(_numchannels));
-		std::cout << "numchannels = " << _numchannels << std::endl;
+		//std::cout << "numchannels = " << _numchannels << std::endl;
 		
 		file.write( (char*)&_samprate, sizeof(_samprate));
-		std::cout << "samprate = " << _samprate << std::endl;
+		//std::cout << "samprate = " << _samprate << std::endl;
 		
 		file.write( (char*)&_byterate, sizeof(_byterate));
-		std::cout << "byterate = " << _byterate << std::endl;
+		//std::cout << "byterate = " << _byterate << std::endl;
 		
 		unsigned short blockalign = ( ( _numchannels * _bitspersample ) / 8);
 		
 		file.write( (char*)&blockalign, sizeof(blockalign));
-		std::cout << "blockalign = " << blockalign << std::endl;
+		//std::cout << "blockalign = " << blockalign << std::endl;
 		
 		file.write( (char*)&_bitspersample, sizeof(_bitspersample));
-		std::cout << "bitspersample = " << _bitspersample << std::endl;
+		//std::cout << "bitspersample = " << _bitspersample << std::endl;
 		
 		file.write( DATA, 4 );		
 		
 		file.write( (char*)&subchunk2size, sizeof(subchunk2size));
-		std::cout << "subchunk2size = " << subchunk2size << std::endl;
+		//std::cout << "subchunk2size = " << subchunk2size << std::endl;
 		
 		if( _bitspersample == 8 )
 		{
@@ -350,6 +350,30 @@ public:
 		
 		file.close();
 		return true;
+	}
+
+	void setsignal( vector<double>& signal, double amp=100.0 )
+	{
+		double ampl;
+		
+		if( _bitspersample == 32 )
+		{
+			float maxval = FLT_MAX/2.0; 
+			ampl = ((double)maxval / 100.0 ) * amp;
+		}
+		else
+		{
+			long maxval = 1;
+			
+			maxval <<= (_bitspersample-1);
+			maxval--;
+			ampl = ((double)maxval / 100.0 ) * amp;
+		}
+		
+		samps16.clear();
+		
+		for( auto s : signal )
+			samps16.push_back( (short) (s*ampl) );
 	}
 
 		
