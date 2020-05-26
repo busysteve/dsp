@@ -7,7 +7,6 @@
 #include <cstring>
 #include <cmath>
 #include <float.h>
-#include "tnt/tnt.h"
 
 
 using namespace std;

@@ -181,6 +181,13 @@ template <typename T> int VectorTest()
 		
 		wav.write( "quad-tone.wav" );
 		
+		std::complex<T> c1( 0, 1 );
+		
+		auto z = std::exp( c1 * 1.5 );
+		
+		std::cout << z << std::endl;
+		
+		
 	}	
 	
 	return 0;

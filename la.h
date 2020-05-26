@@ -13,6 +13,12 @@
 #include <initializer_list>
 #include <exception>
 #include <functional>
+#include <algorithm>
+#include <future>
+#include <thread>
+#include <iterator>
+#include <numeric>
+
 
 class linear_algebra_error : public exception {
 
@@ -41,7 +47,7 @@ public:
 template <typename T> class Matrix;
 
 
-template <class T> class Vector : public std::vector< T>
+template <class T> class Vector : public std::vector<T>
 {
 
 public:
@@ -75,17 +81,19 @@ public:
 	virtual ~Vector<T>() {}
 
 
+
 	// Vector Outer Products 
 	Matrix<T> outer( const Vector<T>& v ) const {
-	  Matrix<T> r( (*this).size(), v.size(), 0.0);
+		Matrix<T> m( (*this).size(), v.size(), 0.0);
+		const Vector<T>& t(*this);
 
-	  for (unsigned int i=0; i<r.nr(); i++) {
-	    for (unsigned int j=0; j<r.nc(); j++) {
-	      r(i,j) = (*this)[i] * v[j];
-	    }
-	  }
+		for (unsigned int i=0; i<m.nr(); i++) {
+			#pragma omp parallel for
+			for (unsigned int j=0; j<m.nc(); j++)
+				m(i,j) = t[i] * v[j];
+		}
 
-	  return r;
+		return m;
 	}
 
 
