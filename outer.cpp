@@ -7,7 +7,7 @@ int main()
 	const double PI = 3.141592653589793238463;
 	const double PI2 = PI * 2.0;
 	
-	double framerate = 11025.0;
+	double framerate = 110250.0;
 
 	Vector<double> ts;
 	for( double t=0.0; t <1.0; t += 1.0/framerate)

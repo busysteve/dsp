@@ -33,6 +33,9 @@ int main()
 	Wave wav( framerate, 16 );	
 	wav.setsignal(ys, 100.0);	
 	wav.write( "quad-tone-cpp.wav" );
+	
+	
+	
 }
 
 

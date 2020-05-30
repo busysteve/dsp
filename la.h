@@ -42,9 +42,35 @@ public:
 	{ msg = em; }
 };
  
+const double PI = 3.141592653589793238463;
+const double PI2 = PI * 2.0;
 
 
+template <typename T> class Vector;
 template <typename T> class Matrix;
+
+   
+template<typename From, typename To> void convert_vector_copy( Vector<From>& f, Vector<To>& t )
+{
+	t.clear();
+	t.resize( f.size() );
+
+	for( int i=0; i < f.size(); i++ )
+		t[i] = f[i];
+}
+    
+template<typename From, typename To> void convert_matrix_copy( Matrix<From>& f, Matrix<To>& t )
+{
+	t.clear();
+	t.resize( f.nr(), f.nc() );
+	
+	#pragma omp parallel for
+	for( int i=0; i < f.nr(); i++ )
+		for( int j=0; j < f.nc(); j++ )
+			t[i][j] = f[i][j];
+}
+    
+
 
 
 template <class T> class Vector : public std::vector<T>
@@ -52,6 +78,9 @@ template <class T> class Vector : public std::vector<T>
 
 public:
 
+	//static const double PI = 3.141592653589793238463;
+	//static const double PI2 = PI * 2.0;
+    
 	Vector< T>() {}
 	
 	Vector<T>( int s, T x = (T)(0.0) ) {
@@ -87,8 +116,9 @@ public:
 		Matrix<T> m( (*this).size(), v.size(), 0.0);
 		const Vector<T>& t(*this);
 
+		#pragma omp parallel for
 		for (unsigned int i=0; i<m.nr(); i++) {
-			#pragma omp parallel for
+			//#pragma omp parallel for
 			for (unsigned int j=0; j<m.nc(); j++)
 				m(i,j) = t[i] * v[j];
 		}
@@ -102,8 +132,14 @@ public:
 	
 	T dot( const Vector<T>& v ) const 
 	{
+		if( v.size() == 0 )
+			throw vector_algebra_error("Passed Vector is zero length for dot product");
+		
+		if( this->size() == 0 )
+			throw vector_algebra_error("This Vector is zero length for dot product");
+		
 		if( this->size() != v.size() || v.size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("Vector sizes do not match as needed for dot product");
 		
 		T ret = 0;
 		for( int i=0; i < this->size(); i++ )
@@ -114,8 +150,14 @@ public:
 
 	Vector<T>  mul( const Vector<T>& v ) const 
 	{
+		if( v.size() == 0 )
+			throw vector_algebra_error("Passed Vector is zero length for product");
+		
+		if( this->size() == 0 )
+			throw vector_algebra_error("This Vector is zero length for product");
+		
 		if( this->size() != v.size() || v.size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("Vector sizes do not match as needed for product");
 		
 		Vector<T> vret( v.size(), (T)0.0 );
 		for( int i=0; i < v.size(); i++ )
@@ -126,8 +168,14 @@ public:
 
 	Vector<T>  div( const Vector<T>& v ) const 
 	{
+		if( v.size() == 0 )
+			throw vector_algebra_error("Passed Vector is zero length for divsion");
+		
+		if( this->size() == 0 )
+			throw vector_algebra_error("This Vector is zero length for divsion");
+		
 		if( this->size() != v.size() || v.size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("Vector sizes do not match as needed for divsion");
 		
 		Vector<T> vret( v.size(), (T)0.0 );
 		for( int i=0; i < v.size(); i++ )
@@ -138,8 +186,14 @@ public:
 
 	Vector<T>  add( const Vector<T>& v ) const 
 	{
+		if( v.size() == 0 )
+			throw vector_algebra_error("Passed Vector is zero length for addition");
+		
+		if( this->size() == 0 )
+			throw vector_algebra_error("This Vector is zero length for addition");
+		
 		if( this->size() != v.size() || v.size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("Vector sizes do not match as needed for addition");
 		
 		Vector<T> vret( v.size(), (T)0.0 );
 		for( int i=0; i < v.size(); i++ )
@@ -150,8 +204,14 @@ public:
 
 	Vector<T>  sub( const Vector<T>& v ) const 
 	{
+		if( v.size() == 0 )
+			throw vector_algebra_error("Passed Vector is zero length for subtraction");
+		
+		if( this->size() == 0 )
+			throw vector_algebra_error("This Vector is zero length for subtraction");
+		
 		if( this->size() != v.size() || v.size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("Vector sizes do not match as needed for subtraction");
 		
 		Vector<T> vret( v.size(), (T)0.0 );
 		for( int i=0; i < v.size(); i++ )
@@ -165,8 +225,9 @@ public:
 
 	Vector<T>  mul( T s ) const 
 	{
+
 		if( this->size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("This Vector is zero length for product");
 		
 		Vector<T> vret( std::vector<T>::size(), (T)0.0 );
 		for( int i=0; i < std::vector<T>::size(); i++ )
@@ -177,8 +238,11 @@ public:
 
 	Vector<T>  div( T s ) const 
 	{
+		if( s == (T)0.0 )
+			throw vector_algebra_error("Passed in scalar is zero for divsion");
+		
 		if( this->size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("This Vector is zero length for divsion");
 		
 		Vector<T> vret( std::vector<T>::size(), (T)0.0 );
 		for( int i=0; i < std::vector<T>::size(); i++ )
@@ -187,10 +251,25 @@ public:
 		return vret;
 	}
 
+	Vector<T>&  div( T s ) 
+	{
+		if( s == (T)0.0 )
+			throw vector_algebra_error("Passed in scalar is zero for divsion");
+		
+		if( this->size() == 0 )
+			throw vector_algebra_error("This Vector is zero length for divsion");
+		
+		//Vector<T> vret( std::vector<T>::size(), (T)0.0 );
+		for( int i=0; i < std::vector<T>::size(); i++ )
+			(*this)[i] /= s;
+			
+		return (*this);
+	}
+
 	Vector<T>  add( T s ) const 
 	{
 		if( this->size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("This Vector is zero length for addition");
 		
 		Vector<T> vret( std::vector<T>::size(), (T)0.0 );
 		for( int i=0; i < std::vector<T>::size(); i++ )
@@ -202,7 +281,7 @@ public:
 	Vector<T>  sub( T s ) const 
 	{
 		if( this->size() == 0 )
-			return nan("NaN");
+			throw vector_algebra_error("This Vector is zero length for subtraction");
 		
 		Vector<T> vret( std::vector<T>::size(), (T)0.0 );
 		for( int i=0; i < std::vector<T>::size(); i++ )
@@ -214,6 +293,9 @@ public:
 	// Vector Operator Overloading
 	Vector<T>  operator-( ) const
 	{
+		if( this->size() == 0 )
+			throw vector_algebra_error("This Vector is zero length for negation");
+		
 		Vector<T> ret( (*this).mul((T)-1.0) );
 		
 		return ret;
@@ -261,8 +343,50 @@ public:
 	{
 		return div(r);
 	}
+
+	Vector<T>&  operator/=( const T& r ) 
+	{
+		return div(r);
+	}
+
+	Vector<T>&  operator=( const T& r ) 
+	{
+		std::vector<T>::clear();
+		
+		std::vector<T>::resize( r.size() );
+		
+		for( int a=0; a < r.size(); a++ )
+			r[a] = (*this)[a];
+		
+		return (*this);
+	}
+
+	Vector<T>& range( double begin, double end, double step = 1.0 )
+	{
+		this->clear();
+        
+		for( double t=begin; t < end; t += step )
+			 this->push_back(t);
+			 
+		return (*this);
+	}
 	
+	Vector<T>& range( double end )
+	{
+		return range( 0.0, end );
+	}
 	
+	/*
+	Vector<T> range( double begin, double end, double step = 0.0 ) const
+	{
+		Vector<T> v;
+		
+		v.range( begin, end, step );
+			 
+		return v;
+	}
+	*/
+    
 
 	friend Vector<T> operator-( const T& l, const Vector<T> & v)
 	{
@@ -335,9 +459,20 @@ template <typename T> class Matrix
 	
 	
 public:
+    
+	const double PI = 3.141592653589793238463;
+	const double PI2 = PI * 2.0;
+    
+    
+    
 	Matrix<T>() : _rs(0), _cs(0) {}
 	
-	Matrix(unsigned int rows, unsigned int cols, const T& x) 
+	Matrix(unsigned int rows, unsigned int cols, const T& x=(T)0.0) 
+	{
+		resize( rows, cols, x );
+	}
+
+	Matrix<T>& resize(unsigned int rows, unsigned int cols, const T& x=(T)0.0) 
 	{
 		_m.resize(rows);
 		
@@ -346,6 +481,8 @@ public:
 		
 		_rs = rows;
 		_cs = cols;
+		
+		return (*this);
 	}
 
 	//Matrix( initializer_list< initializer_list<T> > il ) 
@@ -363,14 +500,16 @@ public:
 
 	Matrix(const Matrix<T>& r) 
 	{
-		_m = r._m;
-		_rs = r.nr();
-		_cs = r.nc();
+		(*this) = r;
 	}
 
 	virtual ~Matrix(){}
 
 
+	void clear()
+	{
+		_m.clear();
+	}
 
 	// Assignment Operator
 
@@ -387,6 +526,7 @@ public:
 	  }
 
 	  for (unsigned int i=0; i<new_rows; i++) {
+        #pragma omp parallel for
 	    for (unsigned int j=0; j<new_cols; j++) {
 	      _m[i][j] = rhs(i, j);
 	    }
@@ -404,18 +544,23 @@ public:
 	  if (&rhs == this)
 	    return true;
 
+      bool ret = true;
 
 	  unsigned int new_rows = rhs.nr();
 	  unsigned int new_cols = rhs.nc();
-
+	  
+		#pragma omp parallel for
 	  for (unsigned int i=0; i<new_rows; i++) {
 	    for (unsigned int j=0; j<new_cols; j++) {
 	      if( _m[i][j] != rhs(i, j) )
-	      	return false;
+          {
+	      	ret = false;
+            i=j=new_cols;
+          }
 	    }
 	  }
 
-	  return true;
+	  return ret;
 	}
 
 
@@ -429,8 +574,10 @@ public:
 	  
 	 
 	  Matrix result(_rs, _cs, 0.0);
-
+	  
+	#pragma omp parallel for
 	  for (unsigned int i=0; i<_rs; i++) {
+        
 	    for (unsigned int j=0; j<_cs; j++) {
 	      result(i,j) = this->_m[i][j] + rhs(i,j);
 	    }
@@ -446,6 +593,7 @@ public:
 	  unsigned int _rs = rhs.nr();
 	  unsigned int _cs = rhs.nc();
 
+	#pragma omp parallel for
 	  for (unsigned int i=0; i<_rs; i++) {
 	    for (unsigned int j=0; j<_cs; j++) {
 	      this->_m[i][j] += rhs(i,j);
@@ -468,6 +616,7 @@ public:
 	  
 	  Matrix result(rs, cs, 0.0);
 
+	#pragma omp parallel for
 	  for (unsigned int i=0; i<rs; i++) {
 	    for (unsigned int j=0; j<cs; j++) {
 	      for (unsigned int k=0; k<rhs.nr(); k++) {
@@ -494,6 +643,7 @@ public:
 	//Matrix<T>& func( T(*f)(T) ) {
 	  //Matrix result(_rs, _cs, 0.0);
 
+	#pragma omp parallel for
 	  for (unsigned int i=0; i<_rs; i++) {
 	    for (unsigned int j=0; j<_cs; j++) {
 	      (*this)(i,j) = f( this->_m[i][j] );
@@ -509,6 +659,7 @@ public:
 	Matrix<T>& operator+(const T& rhs) {
 	  Matrix result(_rs, _cs, 0.0);
 
+	#pragma omp parallel for
 	  for (unsigned int i=0; i<_rs; i++) {
 	    for (unsigned int j=0; j<_cs; j++) {
 	      result(i,j) = this->_m[i][j] + rhs;
@@ -519,7 +670,20 @@ public:
 	}
 
 	
-	  
+	
+	Matrix<T>&  operator=( const T& r ) 
+	{
+		_m.clear();
+		
+		_m.resize( r.nr() );
+		
+		for( int a=0; a < r.nr(); a++ )
+			r[a] = (*this)[a];
+		
+		return (*this);
+	}
+
+  
 
 	// Multiply a Matrix with a Vector 
 
@@ -534,6 +698,7 @@ public:
 	
 	  Vector<T> result(_rs, 0.0);
 
+	#pragma omp parallel for
 	  for (unsigned int i=0; i<_rs; i++) {
 	    for (unsigned int j=0; j<_cs; j++) {
 	      result[i] += this->_m[i][j] * r[j];
@@ -546,6 +711,7 @@ public:
 	Vector<T> operator+(const Vector<T>& r) const {
 	  Vector<T> result(_rs, 0.0);
 
+        #pragma omp parallel for
 	  for (unsigned int i=0; i<_rs; i++) {
 	    for (unsigned int j=0; j<_cs; j++) {
 	      result[i] += this->_m[i][j] + r[j];
@@ -561,6 +727,7 @@ public:
 	  auto rs=_cs;
 	  Matrix result(rs, cs, 0.0);
 
+        #pragma omp parallel for
 	  for (unsigned int i=0; i<_rs; i++) {
 	    for (unsigned int j=0; j<_cs; j++) {
 	      result(j,i) = this->_m[i][j];
@@ -568,7 +735,8 @@ public:
 	  }
 	
 	_m.clear();
-	_m = result._m;
+	//_m = result._m;
+	(*this) = result;
 	_rs=rs;
 	_cs=cs;	
 		
@@ -583,7 +751,8 @@ public:
 
 	Vector<T> diag_vec() {
 	  Vector<T> result(_rs, 0.0);
-
+      
+      #pragma omp parallel for
 	  for (unsigned int i=0; i<_rs; i++) {
 	    result[i] = this->_m[i][i];
 	  }
