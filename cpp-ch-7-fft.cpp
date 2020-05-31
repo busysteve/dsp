@@ -73,25 +73,6 @@ Vector<double> synthtone( double framerate, double duration, Vector<double> &fre
 
 int main()
 {
-
-	/*		
-	Vector<double> amps( {0.6, 0.25, 0.1, 0.05} );
-	Vector<double> fs( {300.0, 400.0, 500.0, 600.0} );
-	double framerate = 11025.0;
-
-	auto ys = synthtone( framerate, 1.0, fs, amps );
-		
-	Wave wav( framerate, 16 );	
-	wav.setsignal(ys, 100.0);	
-	wav.write( "quad-tone-cpp.wav" );	
-	
-	
-	Vector<cx> cys;
-	
-	convert_vector_copy< double, cx >( ys, cys );
-	
-	auto d = dft(cys);
-	*/
 	
 	double N=4;
 	
@@ -121,11 +102,40 @@ int main()
 	std::cout << M << std::endl;
 	
 	M.func( [&]( cx x )->cx { return std::exp( cx(0,1) * PI2 * x  ); }  );
-	std::cout << M << std::endl;
 	
+	auto X = M;
 	
-	M.print();
+	M = M.func( [&]( cx x )-> cx { return std::conj( x ); } ).transpose().mul( X );
+	M.print() << std::endl;
+	
+	M.func( [=]( cx x )->cx { return x / N; } );
+	M.print() << std::endl;
+	
+
 }
+
+
+
+
+/*  Out put 
+
+{0.0,0.2,0.5,0.8}
+{0.0,1.0,2.0,3.0}
+{{0.0,0.0,0.0,0.0},{0.0,0.2,0.5,0.8},{0.0,0.5,1.0,1.5},{0.0,0.8,1.5,2.2}}
+{{(0.0,0.0),(0.0,0.0),(0.0,0.0),(0.0,0.0)},{(0.0,0.0),(0.2,0.0),(0.5,0.0),(0.8,0.0)},{(0.0,0.0),(0.5,0.0),(1.0,0.0),(1.5,0.0)},{(0.0,0.0),(0.8,0.0),(1.5,0.0),(2.2,0.0)}}
+|(4.0,0.0)	(-0.0,0.0)	(0.0,0.0)	(0.0,0.0)|
+|(-0.0,-0.0)	(4.0,0.0)	(-0.0,0.0)	(0.0,0.0)|
+|(0.0,-0.0)	(-0.0,-0.0)	(4.0,0.0)	(-0.0,0.0)|
+|(0.0,-0.0)	(0.0,-0.0)	(-0.0,-0.0)	(4.0,0.0)|
+
+|(1.0,0.0)	(-0.0,0.0)	(0.0,0.0)	(0.0,0.0)|
+|(-0.0,-0.0)	(1.0,0.0)	(-0.0,0.0)	(0.0,0.0)|
+|(0.0,-0.0)	(-0.0,-0.0)	(1.0,0.0)	(-0.0,0.0)|
+|(0.0,-0.0)	(0.0,-0.0)	(-0.0,-0.0)	(1.0,0.0)|
+
+
+
+*/
 
 
 
