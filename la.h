@@ -1,7 +1,3 @@
-
-#ifndef __BS_Matrix_H
-#define __BS_Matrix_H
-
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -10,7 +6,6 @@
 #include <cstring>
 #include <cmath>
 #include <float.h>
-#include <initializer_list>
 #include <exception>
 #include <functional>
 #include <algorithm>
@@ -18,8 +13,16 @@
 #include <thread>
 #include <iterator>
 #include <numeric>
+#include <initializer_list>
 
-class linear_algebra_error : public exception {
+
+
+#ifndef __BS_Matrix_H
+#define __BS_Matrix_H
+
+
+
+class linear_algebra_error : public std::exception {
 
 protected:
     std::string msg;
@@ -97,13 +100,13 @@ public:
             std::vector<T>::push_back(k);
     }
 
-    Vector<T>(initializer_list<T> l)
+    Vector<T>(std::initializer_list<T> l)
     {
         for (auto k : l)
             std::vector<T>::push_back(k);
     }
 
-    Vector<T>(initializer_list<initializer_list<T> >& ll)
+    Vector<T>(std::initializer_list<std::initializer_list<T> >& ll)
     {
         for (auto l : ll)
             std::vector<T>::push_back(T(l));

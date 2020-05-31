@@ -1,16 +1,7 @@
-//#include <iostream>
-//#include <fstream>
-//#include <vector>
-//#include <complex>
-//#include <string>
-//#include <cstring>
-//#include <cmath>
-//#include <float.h>
-//#include "tnt/tnt.h"
-//#include <initializer_list>
-#include "Signal.h"
-#include "la.h"
 
+
+
+#include "la.h"
 
 typedef std::complex<double> cx;
 
@@ -45,7 +36,7 @@ Vector<cx> dft( Vector<cx> &ys )
 	}
 	catch(linear_algebra_error e)
 	{
-		cout << e.what() << " in dtf()" << endl;
+		std::cout << e.what() << " in dtf()" << std::endl;
 		throw e;
 	}
 		
