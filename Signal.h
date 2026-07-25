@@ -77,11 +77,11 @@ public:
 	}	
 
 
-	void sinwave( double freq, double amp, double duration )
+	void sinwave( std::vector<double> freqs, double amp, double duration )
 	{
 		double ampl;
 		
-		
+		double freq = 0.0;
 		
 		if( _bitspersample == 32 )
 		{
@@ -113,16 +113,29 @@ public:
 			switch( _bitspersample )
 			{
 				case 8:
-					samps8.push_back( (unsigned char)ss );
+					if( samps8.size() < count ) samps8.resize( count );
+					samps8[i] = ( samps8[i] + ( (unsigned char)ss ) ) / 2;
 					break;
 				case 16:
-					samps16.push_back( (short)ss );
+					if( samps16.size() < count ) samps16.resize( count );
+					samps16[i] = ( samps16[i] + ( (short)ss ) ) / 2;
+					break;
+				case 20:
+					if( samps24.size() < count ) samps24.resize( count );
+					samps24[i] = ( samps24[i] + ( (long)ss ) ) / 2;
 					break;
 				case 24:
-					samps24.push_back( (long)ss );
+					if( samps24.size() < count ) samps24.resize( count );
+					for( int j=0; j < freqs.size(); j++ )
+					{
+						s = std::sin((((double)i)*(freqs[j]))*(360.0/_samprate)*(PI/180.0))*ampl;
+						ss += s;
+					}
+					samps24[i] += (long)( ss / (double)freqs.size() );
 					break;
 				case 32:
-					samps32.push_back( (float)ss );
+					if( samps32.size() < count ) samps32.resize( count );
+					samps32[i] = ( samps32[i] + ( (float)ss ) ) / 2.0;
 					break;
 				default:
 					;
