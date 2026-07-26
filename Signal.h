@@ -8,6 +8,16 @@
 #include <cmath>
 #include <float.h>
 
+#include <algorithm>
+#include <cmath>
+#include <complex>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <stdexcept>
+#include <vector>
+
+constexpr double PI = 3.14159265358979323846;
 
 using namespace std;
 
@@ -15,10 +25,10 @@ using namespace std;
 class Signal
 {
 
-protected:
+public:
 	std::vector<unsigned char>  samps8;
 	std::vector<short>  samps16;
-	std::vector<long>  samps24;
+	std::vector<std::int32_t>  samps24;
 	std::vector<float>  samps32;
 	std::vector<long>  samps64;
 	
@@ -27,10 +37,11 @@ protected:
 	unsigned short _blockalign = 0;
 	unsigned short _bitspersample = 0;
 	
-	const double PI = 3.141592653589793238463;
+	//const double PI = 3.141592653589793238463;
+	//constexpr double PI = 3.14159265358979323846;
 	
 public:
-
+/*
 	unsigned int bitReverse(unsigned int x, int log2n) 
 	{
 	  int n = 0;
@@ -68,13 +79,17 @@ public:
 	    }
 	  }
 	}
-	
+
+	*/	
+
+
 	Signal( int samprate = 44000, int bits = 24 )
 	{
 		_samprate = samprate;
 		_bitspersample = bits;
 		_byterate = _samprate * ( _bitspersample / 8 );
 	}	
+
 
 
 	void sinwave( std::vector<double> freqs, double amp, double duration )
@@ -143,6 +158,373 @@ public:
 			//std::cout << s << "  \t  " << ss << std::endl;			
 		}
 	}
+
+
+
+// -----------------------------------------------------------------------------
+// FFT helpers
+// -----------------------------------------------------------------------------
+
+unsigned int bitReverse(unsigned int x, int log2n)
+{
+    unsigned int result = 0;
+
+    for (int i = 0; i < log2n; ++i) {
+        result <<= 1U;
+        result |= x & 1U;
+        x >>= 1U;
+    }
+
+    return result;
+}
+
+template<class Iter_T>
+void fft(Iter_T input, Iter_T output, int log2n)
+{
+    using Complex =
+        typename std::iterator_traits<Iter_T>::value_type;
+
+    const Complex J(0.0, 1.0);
+    const int n = 1 << log2n;
+
+    // Copy samples into bit-reversed order.
+    for (unsigned int i = 0;
+         i < static_cast<unsigned int>(n);
+         ++i) {
+        output[bitReverse(i, log2n)] = input[i];
+    }
+
+    // Iterative radix-2 Cooley-Tukey FFT.
+    for (int stage = 1; stage <= log2n; ++stage) {
+        const int blockSize = 1 << stage;
+        const int halfBlock = blockSize >> 1;
+
+        Complex w(1.0, 0.0);
+
+        const Complex wm =
+            std::exp(-J * (PI / static_cast<double>(halfBlock)));
+
+        for (int j = 0; j < halfBlock; ++j) {
+            for (int k = j; k < n; k += blockSize) {
+                const Complex t =
+                    w * output[k + halfBlock];
+
+                const Complex u = output[k];
+
+                output[k] = u + t;
+                output[k + halfBlock] = u - t;
+            }
+
+            w *= wm;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Spectrogram structures
+// -----------------------------------------------------------------------------
+
+struct SpectrogramFrame
+{
+    // Time at the center of this FFT frame.
+    double timeSeconds = 0.0;
+
+    // 1,024 values corresponding to:
+    // 1, 5, 9, ..., 4093 Hz.
+    std::vector<float> binsDbFS;
+};
+
+struct Spectrogram
+{
+    // Frequency represented by each bin position.
+    std::vector<double> frequenciesHz;
+
+    // One bin vector for every time frame.
+    std::vector<SpectrogramFrame> frames;
+};
+
+// -----------------------------------------------------------------------------
+// Utility functions
+// -----------------------------------------------------------------------------
+
+bool isPowerOfTwo(std::size_t value)
+{
+    return value != 0 && (value & (value - 1)) == 0;
+}
+
+int powerOfTwoLog2(std::size_t value)
+{
+    if (!isPowerOfTwo(value)) {
+        throw std::invalid_argument(
+            "FFT frame size must be a power of two.");
+    }
+
+    int result = 0;
+
+    while (value > 1) {
+        value >>= 1U;
+        ++result;
+    }
+
+    return result;
+}
+
+std::size_t nextPowerOfTwo(std::size_t value)
+{
+    if (value <= 1) {
+        return 1;
+    }
+
+    --value;
+
+    for (std::size_t shift = 1;
+         shift < sizeof(std::size_t) * 8;
+         shift <<= 1U) {
+        value |= value >> shift;
+    }
+
+    return value + 1;
+}
+
+// -----------------------------------------------------------------------------
+// Main spectrogram function
+// -----------------------------------------------------------------------------
+
+Spectrogram makeSpectrogram24Bit(
+    std::vector<std::int32_t>& waveform,
+    double sampleRate,
+    std::size_t frameSize = 0,
+    std::size_t hopSize = 0,
+    float minimumDbFS = -120.0F)
+{
+    constexpr std::int32_t PCM24_MIN = -8388608;
+    constexpr std::int32_t PCM24_MAX =  8388607;
+
+    constexpr double FIRST_FREQUENCY = 10.0;
+    constexpr double FREQUENCY_STEP = 10.0;
+    constexpr std::size_t BIN_COUNT = 256;
+
+    if (!std::isfinite(sampleRate) || sampleRate <= 0.0) {
+        throw std::invalid_argument(
+            "Sample rate must be positive.");
+    }
+
+    // Highest returned bin is 4093 Hz.
+    constexpr double HIGHEST_FREQUENCY =
+        FIRST_FREQUENCY +
+        FREQUENCY_STEP * static_cast<double>(BIN_COUNT - 1);
+
+    if (sampleRate / 2.0 < HIGHEST_FREQUENCY) {
+        throw std::invalid_argument(
+            "Sample rate is too low. Nyquist frequency must "
+            "be at least 4093 Hz.");
+    }
+
+    /*
+        For approximately 1 Hz FFT spacing, use a frame containing
+        roughly one second of audio, rounded upward to a power of two.
+
+        Examples:
+            8,000 Hz  -> 8,192 samples
+            44,100 Hz -> 65,536 samples
+            48,000 Hz -> 65,536 samples
+    */
+    if (frameSize == 0) {
+        frameSize = nextPowerOfTwo(
+            static_cast<std::size_t>(std::ceil(sampleRate)));
+    }
+
+    if (!isPowerOfTwo(frameSize)) {
+        throw std::invalid_argument(
+            "frameSize must be a power of two.");
+    }
+
+    if (frameSize < 2) {
+        throw std::invalid_argument(
+            "frameSize must contain at least two samples.");
+    }
+
+    // Default to 75% overlap.
+    if (hopSize == 0) {
+        hopSize = std::max<std::size_t>(1, frameSize / 4);
+    }
+
+    if (hopSize > frameSize) {
+        throw std::invalid_argument(
+            "hopSize cannot exceed frameSize.");
+    }
+
+    const int log2n = powerOfTwoLog2(frameSize);
+    const std::size_t positiveBinCount = frameSize / 2 + 1;
+
+    Spectrogram result;
+
+    result.frequenciesHz.resize(BIN_COUNT);
+
+    for (std::size_t i = 0; i < BIN_COUNT; ++i) {
+        result.frequenciesHz[i] =
+            FIRST_FREQUENCY +
+            FREQUENCY_STEP * static_cast<double>(i);
+    }
+
+    if (waveform.empty()) {
+        return result;
+    }
+
+    // Create a Hann window.
+    std::vector<double> window(frameSize);
+    double windowSum = 0.0;
+
+    for (std::size_t i = 0; i < frameSize; ++i) {
+        window[i] =
+            0.5 -
+            0.5 * std::cos(
+                2.0 * PI * static_cast<double>(i) /
+                static_cast<double>(frameSize - 1));
+
+        windowSum += window[i];
+    }
+
+    if (windowSum <= 0.0) {
+        throw std::runtime_error(
+            "Invalid window normalization.");
+    }
+
+    std::vector<std::complex<double>> fftInput(frameSize);
+    std::vector<std::complex<double>> fftOutput(frameSize);
+    std::vector<double> fftPower(positiveBinCount);
+
+    const double dbFloorAmplitude =
+        std::pow(10.0, static_cast<double>(minimumDbFS) / 20.0);
+
+    for (std::size_t frameStart = 0;
+         frameStart < waveform.size();
+         frameStart += hopSize) {
+
+        // Fill and window this frame. Samples beyond the input are
+        // zero-padded.
+        for (std::size_t i = 0; i < frameSize; ++i) {
+            const std::size_t sourceIndex = frameStart + i;
+
+            double normalizedSample = 0.0;
+
+            if (sourceIndex < waveform.size()) {
+                const std::int32_t rawSample =
+                    waveform[sourceIndex];
+
+                if (rawSample < PCM24_MIN ||
+                    rawSample > PCM24_MAX) {
+                    throw std::out_of_range(
+                        "Waveform contains a sample outside "
+                        "the signed 24-bit range.");
+                }
+
+                // Signed 24-bit PCM becomes approximately [-1, 1).
+                normalizedSample =
+                    static_cast<double>(rawSample) / 8388608.0;
+            }
+
+            fftInput[i] = std::complex<double>(
+                normalizedSample * window[i],
+                0.0);
+        }
+
+        fft(
+            fftInput.begin(),
+            fftOutput.begin(),
+            log2n);
+
+        // Store power for the positive-frequency half.
+        for (std::size_t k = 0;
+             k < positiveBinCount;
+             ++k) {
+            fftPower[k] = std::norm(fftOutput[k]);
+        }
+
+        SpectrogramFrame frame;
+
+        frame.timeSeconds =
+            (static_cast<double>(frameStart) +
+             static_cast<double>(frameSize) / 2.0) /
+            sampleRate;
+
+        frame.binsDbFS.resize(BIN_COUNT);
+
+        for (std::size_t outputBin = 0;
+             outputBin < BIN_COUNT;
+             ++outputBin) {
+
+            const double targetFrequency =
+                result.frequenciesHz[outputBin];
+
+            /*
+                Convert the requested physical frequency to a fractional
+                FFT index:
+
+                    FFT index = frequency * frameSize / sampleRate
+            */
+            const double fractionalIndex =
+                targetFrequency *
+                static_cast<double>(frameSize) /
+                sampleRate;
+
+            const std::size_t lowerIndex =
+                static_cast<std::size_t>(
+                    std::floor(fractionalIndex));
+
+            const std::size_t upperIndex =
+                std::min(
+                    lowerIndex + 1,
+                    positiveBinCount - 1);
+
+            const double interpolation =
+                fractionalIndex -
+                static_cast<double>(lowerIndex);
+
+            // Interpolate power between adjacent FFT bins.
+            const double interpolatedPower =
+                fftPower[lowerIndex] * (1.0 - interpolation) +
+                fftPower[upperIndex] * interpolation;
+
+            /*
+                Convert FFT power into a one-sided, full-scale-relative
+                amplitude.
+
+                Hann-window scaling uses the sum of window coefficients.
+                Non-DC positive frequencies are multiplied by two because
+                the negative-frequency half is omitted.
+            */
+            double amplitude =
+                2.0 * std::sqrt(
+                    std::max(0.0, interpolatedPower)) /
+                windowSum;
+
+            amplitude = std::max(
+                amplitude,
+                dbFloorAmplitude);
+
+            double dbFS =
+                20.0 * std::log10(amplitude);
+
+            dbFS = std::clamp(
+                dbFS,
+                static_cast<double>(minimumDbFS),
+                0.0);
+
+            frame.binsDbFS[outputBin] =
+                static_cast<float>(dbFS);
+        }
+
+        result.frames.push_back(std::move(frame));
+
+        // This was the final zero-padded frame.
+        if (frameStart + frameSize >= waveform.size()) {
+            break;
+        }
+    }
+
+    return result;
+}
 		
 };
 
