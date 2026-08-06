@@ -17,6 +17,9 @@
 #include <stdexcept>
 #include <vector>
 
+#include <fcntl.h>
+#include <unistd.h>
+
 constexpr double PI = 3.14159265358979323846;
 
 using namespace std;
@@ -146,7 +149,7 @@ public:
 						s = std::sin((((double)i)*(freqs[j]))*(360.0/_samprate)*(PI/180.0))*ampl;
 						ss += s;
 					}
-					samps24[i] += (long)( ss / (double)freqs.size() );
+					samps24[i] += (int32_t)( ss / (double)freqs.size() );
 					break;
 				case 32:
 					if( samps32.size() < count ) samps32.resize( count );
@@ -409,11 +412,29 @@ Spectrogram makeSpectrogram24Bit(
             double normalizedSample = 0.0;
 
             if (sourceIndex < waveform.size()) {
-                const std::int32_t rawSample =
+                std::int32_t rawSample =
                     waveform[sourceIndex];
+
+		if( rawSample & ( 0x01 << 23 ))
+		{
+			rawSample &= 0x7FFFFF;
+			// rawSample |= 0x80000000;
+			rawSample = -rawSample;
+		}	
+
+
+		// fprintf( stderr, "rawSample bits: %08X  %d\n", rawSample, rawSample );
+		
+
+
+		// std::cerr << rawSample << "\n";
 
                 if (rawSample < PCM24_MIN ||
                     rawSample > PCM24_MAX) {
+
+			std::cerr << "Sample out of range: " << rawSample << std::endl;
+			std::cerr << "Sample index: " << sourceIndex << std::endl;
+
                     throw std::out_of_range(
                         "Waveform contains a sample outside "
                         "the signed 24-bit range.");
@@ -549,7 +570,7 @@ class Wave : public Signal
 	
 public:
 
-	Wave( int samprate = 44000, int bits = 24 ) 
+	Wave( int samprate = 44100, int bits = 24 ) 
 		: Signal ( samprate, bits )
 	{
 	}
@@ -636,7 +657,7 @@ public:
 			}
 			else if( _bitspersample == 32 )
 			{
-				float sample;
+				float sample = 0.0;
 				while( file.read( (char*)&sample, 4 ) )
 					samps32.push_back(sample);
 				file.close();
@@ -651,7 +672,89 @@ public:
 		
 	}
 	
+
+
+	bool raw_read( int samprate, int bitrate )
+	{
+
+			_samprate = samprate;
+			
+			_bitspersample = bitrate;
+
+			std::freopen(nullptr, "rb", stdin);
+
+			if( _bitspersample == 8 )
+			{
+				char sample;
+				while( cin.read( ((char*)(&sample)), _bitspersample/8 ) )
+					samps8.push_back(sample);
+			}
+			else if( _bitspersample == 16 )
+			{
+				int16_t sample = 0;
+				while( cin.read( ((char*)(&sample)), _bitspersample/8 ) )
+					samps16.push_back(sample);
+			}
+			else if( _bitspersample == 24 )
+			{
+				int32_t sample = 0;
+				while( std::fread( ((char*)(&sample)), 1, _bitspersample/8, stdin ) )
+					samps24.push_back(sample);
+			}
+			else if( _bitspersample == 32 )
+			{
+				float sample = 0.0;
+				while( cin.read( ((char*)(&sample)), _bitspersample/8 ) )
+					samps32.push_back(sample);
+			}
+			
+			return true;
+		
+	}
 	
+
+
+	bool raw_read( string filename, int samprate, int bitrate )
+	{
+
+			_samprate = samprate;
+			
+			_bitspersample = bitrate;
+
+			auto file = std::fopen( filename.c_str(), "rb" );
+
+			if( _bitspersample == 8 )
+			{
+				char sample;
+				while( cin.read( ((char*)(&sample)), _bitspersample/8 ) )
+					samps8.push_back(sample);
+			}
+			else if( _bitspersample == 16 )
+			{
+				int16_t sample = 0;
+				while( cin.read( ((char*)(&sample)), _bitspersample/8 ) )
+					samps16.push_back(sample);
+			}
+			else if( _bitspersample == 24 )
+			{
+				int32_t sample = 0;
+				while( std::fread( ((char*)(&sample)), 1, _bitspersample/8, file ) )
+					samps24.push_back(sample);
+			}
+			else if( _bitspersample == 32 )
+			{
+				float sample = 0.0;
+				while( cin.read( ((char*)(&sample)), _bitspersample/8 ) )
+					samps32.push_back(sample);
+			}
+			
+			return true;
+		
+	}
+	
+
+
+
 	bool write( std::string filename )
 	{
 		std::ofstream file;
@@ -745,6 +848,176 @@ public:
 		file.close();
 		return true;
 	}
+
+	void raw_write( std::string filename )
+	{
+		std::ofstream file;
+		
+		file.open( filename, std::ios::binary );
+		
+		if( _bitspersample == 8 )
+		{
+			for( auto sample : samps8 )
+				file << sample;
+		}
+		else if( _bitspersample == 16 )
+		{
+			for( auto sample : samps16 )
+				file.write( (char*)&sample, 2 );
+		}
+		else if( _bitspersample == 24 )
+		{
+			for( auto sample : samps24 )
+				file.write( (char*)&sample, 3 );
+		}
+		else if( _bitspersample == 32 )
+		{
+			for( auto sample : samps32 )
+				file.write( (char*)&sample, 4 );
+		}
+		
+		file.close();
+		
+	}
+
+
+	void raw_write()
+	{
+	
+
+		
+		std::freopen(nullptr, "wb", stdout );
+
+
+		if( _bitspersample == 8 )
+		{
+			for( auto sample : samps8 )
+				std::cout.write( (char*)&sample, 1 );
+		}
+		else if( _bitspersample == 16 )
+		{
+			for( auto sample : samps16 )
+				std::cout.write( (char*)&sample, 2 );
+		}
+		else if( _bitspersample == 24 )
+		{
+			for( auto sample : samps24 )
+				std::cout.write( (char*)&sample, 3 );
+		}
+		else if( _bitspersample == 32 )
+		{
+			for( auto sample : samps32 )
+				std::cout.write( (char*)&sample, 4 );
+		}
+		
+		
+	}
+
+	void raw_dump()
+	{
+		if( _bitspersample == 8 )
+		{
+			for( auto sample : samps8 )
+				std::cout << sample << std::endl;
+		}
+		else if( _bitspersample == 16 )
+		{
+			for( auto sample : samps16 )
+				std::cout << sample << std::endl;
+		}
+		else if( _bitspersample == 24 )
+		{
+			for( auto sample : samps24 )
+				std::cout << sample << std::endl;
+		}
+		else if( _bitspersample == 32 )
+		{
+			for( auto sample : samps32 )
+				std::cout << sample << std::endl;
+		}
+		
+	}
+
+
+
+	Wave slice( int start, int end )
+	{
+		if( _bitspersample == 8 )
+		{
+			samps8 = std::vector<unsigned char>( samps8.begin() + start, samps8.begin() + end );
+		}
+		else if( _bitspersample == 16 )
+		{
+			samps16 = std::vector<short>( samps16.begin() + start, samps16.begin() + end );
+		}
+		else if( _bitspersample == 24 )
+		{
+			samps24 = std::vector<int32_t>( samps24.begin() + start, samps24.begin() + end );
+		}
+		else if( _bitspersample == 32 )
+		{
+			samps32 = std::vector<float>( samps32.begin() + start, samps32.begin() + end );
+		}
+
+		return *this;
+		
+	}
+
+	Wave slice( double start, double end )
+	{
+		int s = (int)(start * _samprate);
+		int e = (int)(end * _samprate);
+		
+		return slice( s, e );
+	}
+
+	Wave slice_copy( int start, int end )
+	{
+		Wave w( _samprate, _bitspersample );
+		
+		if( _bitspersample == 8 )
+		{
+			w.samps8 = std::vector<unsigned char>( samps8.begin() + start, samps8.begin() + end );
+		}
+		else if( _bitspersample == 16 )
+		{
+			w.samps16 = std::vector<short>( samps16.begin() + start, samps16.begin() + end );
+		}
+		else if( _bitspersample == 24 )
+		{
+			w.samps24 = std::vector<int32_t>( samps24.begin() + start, samps24.begin() + end );
+		}
+		else if( _bitspersample == 32 )
+		{
+			w.samps32 = std::vector<float>( samps32.begin() + start, samps32.begin() + end );
+		}
+
+		return w;
+		
+	}
+
+	Wave slice_copy( double start, double end )
+	{
+		int s = (int)(start * _samprate);
+		int e = (int)(end * _samprate);
+		
+		return slice_copy( s, e );
+	}	
+
+	double duration()
+	{
+		if( _bitspersample == 8 )
+			return (double)samps8.size() / (double)_samprate;
+		else if( _bitspersample == 16 )
+			return (double)samps16.size() / (double)_samprate;
+		else if( _bitspersample == 24 )
+			return (double)samps24.size() / (double)_samprate;
+		else if( _bitspersample == 32 )
+			return (double)samps32.size() / (double)_samprate;
+		
+		return 0.0;
+	}
+
 
 	void setsignal( vector<double>& signal, double amp=100.0 )
 	{
