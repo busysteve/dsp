@@ -303,7 +303,7 @@ Spectrogram makeSpectrogram24Bit(
     constexpr std::int32_t PCM24_MIN = -8388608;
     constexpr std::int32_t PCM24_MAX =  8388607;
 
-    constexpr double FIRST_FREQUENCY = 10.0;
+    constexpr double FIRST_FREQUENCY = 100.0;
     constexpr double FREQUENCY_STEP = 10.0;
     constexpr std::size_t BIN_COUNT = 256;
 
@@ -912,6 +912,39 @@ public:
 		
 		
 	}
+
+	void raw_append( std::string filename )
+	{
+		std::ofstream file;
+		
+		file.open( filename, std::ios::binary | std::ios::app );
+
+		if( _bitspersample == 8 )
+		{
+			for( auto sample : samps8 )
+				file << sample;
+		}
+		else if( _bitspersample == 16 )
+		{
+			for( auto sample : samps16 )
+				file.write( (char*)&sample, 2 );
+		}
+		else if( _bitspersample == 24 )
+		{
+			for( auto sample : samps24 )
+				file.write( (char*)&sample, 3 );
+		}
+		else if( _bitspersample == 32 )
+		{
+			for( auto sample : samps32 )
+				file.write( (char*)&sample, 4 );
+		}
+
+		file.close();
+
+	}
+
+
 
 	void raw_dump()
 	{

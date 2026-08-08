@@ -8,7 +8,7 @@ int main( int argc, char** argv )
 {
 
 
-	if( atoi(argv[1]) <= 1 )
+	if( atoi(argv[1]) <= 3 )
 	{
 
 
@@ -20,7 +20,7 @@ int main( int argc, char** argv )
 
 		std::vector<double> freqs;
 
-		for( ; a < argc-atoi(argv[1]); a++ )
+		for( ; a < ( argc - (atoi(argv[1]) == 0 ? 0 : 1) ); a++ )
 		{
 			freqs.push_back( atof(argv[a]) );
 		}
@@ -31,9 +31,14 @@ int main( int argc, char** argv )
 		if( atoi(argv[1]) == 0 )
 			wave.raw_write();
 		else if( atoi(argv[1]) == 1 )
+			wave.raw_write( argv[a] );
+		else if( atoi(argv[1]) == 2 )
+			wave.raw_append( argv[a] );
+		else if( atoi(argv[1]) == 3 )
 			wave.write( argv[a] );
+
 	}
-	else if( atoi(argv[1]) == 2 )
+	else if( atoi(argv[1]) == 4 )
 	{
 		int min_mag = atoi(argv[3]);
 		float start = atof(argv[4]);
@@ -43,7 +48,7 @@ int main( int argc, char** argv )
 
 		wave.raw_read( atoi(argv[2]), 24 );
 	
-		wave.slice( start, duration );
+		wave.slice( start, start + duration );
 
 		auto result = wave.makeSpectrogram24Bit( wave.samps24, atoi(argv[2]));
 
@@ -61,9 +66,9 @@ int main( int argc, char** argv )
 		}
 		std::cout << std::endl;
 	}
-	else if( atoi(argv[1]) == 3 )
+	else if( atoi(argv[1]) == 5 )
 	{
-		int min_mag = atoi(argv[3]);
+		float min_mag = atof(argv[3]);
 		float start = atof(argv[4]);
 		float duration = atof(argv[5]);
 
@@ -73,7 +78,7 @@ int main( int argc, char** argv )
 
 		wave.raw_read( inputfile, atoi(argv[2]), 24 );
 	
-		wave.slice( start, duration );
+		wave.slice( start, start + duration );
 
 		auto result = wave.makeSpectrogram24Bit( wave.samps24, atoi(argv[2]));
 
@@ -81,6 +86,20 @@ int main( int argc, char** argv )
 		{
 			if( result.frames[i].binsDbFS.size() < 1 )
 				continue;
+
+
+			float max_mag = -1000.0f;
+
+			if( min_mag > 0.0f )
+			{
+				for( int k=0; k < result.frames[i].binsDbFS.size(); k++ )
+				{
+					if( result.frames[i].binsDbFS[k] > max_mag )
+						max_mag = result.frames[i].binsDbFS[k];
+				}
+
+				min_mag = max_mag - min_mag;
+			}
 
 			for( int j=0; j < result.frames[i].binsDbFS.size(); j++ )
 			{
@@ -91,7 +110,7 @@ int main( int argc, char** argv )
 		}
 		std::cout << std::endl;
 	}
-	else if( atoi(argv[1]) == 4 )
+	else if( atoi(argv[1]) == 6 )
 	{
 		Wave wave;
 
